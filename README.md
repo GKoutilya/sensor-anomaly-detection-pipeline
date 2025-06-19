@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Sensor Data Logger & Analyzer
 
 ## Project Overview
@@ -146,4 +145,3 @@ In a future project, I will build on this dataset to develop a predictive mainte
 
 - UCI Machine Learning Repository for the SECOM dataset
 - [pandas](https://pandas.pydata.org/) and [matplotlib](https://matplotlib.org/) teams for documentation and tutorials
->>>>>>> 19bd120bd8055266b3522d07127abe4f251fae23
