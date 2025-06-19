@@ -61,7 +61,7 @@ The dataset used in this project is the [SECOM dataset](https://archive.ics.uci.
 
 ---
 
-## Future Work (Project #3 Teaser)
+## Future Work
 
 In a future project, I will build on this dataset to develop a predictive maintenance model using machine learning. The goal will be to detect signs of failure in advance using classification algorithms.
 
