@@ -198,6 +198,8 @@ def phase4(df_final):
     assert not df_numeric.isnull().values.any(), "Data contains missing values."
 
     # Create an Isolation Forest model, more trees = better but slower
+    # Isolation Forests find anomalies by recursively partitioning data into random subsets (trees).
+    # Data points that are isolated quickly (with fewer splits, i.e., shorter paths) are considered anomalies because they differ significantly from the majority of the data.
     # n_estimators - number of trees in the forest
     # contamination - estimated fraction of anomalies in data which helps model decide threshold
     # max_samples - number of samples to draw from data to train each tree, default is auto
