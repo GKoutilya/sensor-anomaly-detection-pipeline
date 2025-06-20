@@ -1,8 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.preprocessing import StandardScaler # Scikit-learn package - popular machine learning library
 import os
+from sklearn.preprocessing import StandardScaler # Scikit-learn package - popular machine learning library
+from sklearn.ensemble import IsolationForest
 
 #################### PHASE 1 ########################
 
@@ -187,7 +188,45 @@ def phase3(df_filled):
 #################### PHASE 4 ##########################
 
 def phase4(df_final):
-    pass
+    # Copy cleaned dataset
+    df = df_final.copy()
+
+    # Remove Timestamp or any non-numeric columns
+    df_numeric = df.select_dtypes(include=[np.number])
+
+    # Check no missing values
+    assert not df_numeric.isnull().values.any(), "Data contains missing values."
+
+    # Create an Isolation Forest model, more trees = better but slower
+    # n_estimators - number of trees in the forest
+    # contamination - estimated fraction of anomalies in data which helps model decide threshold
+    # max_samples - number of samples to draw from data to train each tree, default is auto
+    # random_state - to makes ure you get same results every time you run it
+    model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
+
+    # Trains the model on the data
+    model.fit(df_numeric)
+
+    # Predict anomalies (-1 = anomaly, 1 = normal)
+    predictions = model.predict(df_numeric)
+
+    # Add predictions as a new column
+    df["Anomaly"] = predictions
+
+    # .decision_function(x) -  gives a score, lower score means more anomalous
+    # Add anomaly scores
+    df["Anomaly_Score"] = model.decision_function(df_numeric)
+
+    # Count how many anomalies were found
+    num_anomalies = (df["Anomaly"] == -1).sum()
+    print(f"Number of anomalies detected: {num_anomalies} out of {len(df)} rows")
+
+    # Save anomalies for later review
+    anomalies_only = df[df["Anomaly"] == -1]
+    anomalies_only.to_csv("anomalies_detected.csv", index=False)
+    print("Anomalies saved to 'anomalies_detected.csv'")
+
+    return df
 
 ##################### MAIN ############################
 
