@@ -22,12 +22,13 @@ timestamps = pd.date_range(start=start_time, periods=len(df_filled), freq="10s")
 # Add timestamps as new column
 df_filled["Timestamp"] = timestamps
 
+# Checks to see if the folder already exists
 output_folder = "sensor_plots"
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
 # This whole entire loops goes through all 590 sensors (columns), plots the data and the rolling average of the data on a graph, and saves the graphs as PNG files into a folder
-for sensor_num in range(590):
+#for sensor_num in range(590):
     print(f"Processing sensor {sensor_num} / 589...")
 
     filepath = os.path.join(output_folder, f"sensor_{sensor_num}.png")
@@ -58,3 +59,26 @@ for sensor_num in range(590):
     else:
         print(f"Sensor {sensor_num} already has a saved plot. Skipping.")
 
+# Drops Timestamp when looking at the statistics and describes the sensor statistics
+sensor_data_only = df_filled.drop(columns=["Timestamp"])
+summary_stats = sensor_data_only.describe()
+
+# Sensors with very low standard deviation (flat sensors)
+low_std_sensors = summary_stats.loc["std"][summary_stats.loc["std"] < 0.01]
+print("Very flat sensors (low std):")
+print(low_std_sensors)
+
+# Sensors with very high standard deviation (noisy sensors)
+high_std_sensors = summary_stats.loc["std"][summary_stats.loc["std"] > 1000]
+print("Very noisy sensors (high std):")
+print(high_std_sensors)
+
+# Sensors with extreme maximum values
+weird_max = summary_stats.loc["max"][summary_stats.loc["max"] > 10000]
+print("Sensors with extremely high max values:")
+print(weird_max)
+
+# Sensors with extreme minimum values
+weird_min = summary_stats.loc["min"][summary_stats.loc["min"] < -10000]
+print("Sensors with extremely low min values:")
+print(weird_min)
