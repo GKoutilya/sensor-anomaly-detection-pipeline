@@ -29,23 +29,32 @@ if not os.path.exists(output_folder):
 # This whole entire loops goes through all 590 sensors (columns), plots the data and the rolling average of the data on a graph, and saves the graphs as PNG files into a folder
 for sensor_num in range(590):
     print(f"Processing sensor {sensor_num} / 589...")
-    df_filled[f"Rolling_{sensor_num}"] = df_filled[f"{sensor_num}"].rolling(window=10).mean()
 
-    plt.figure(figsize=(10,5))
+    filepath = os.path.join(output_folder, f"sensor_{sensor_num}.png")
+    if not os.path.exists(filepath):
+        # Standardizes data from each sensor
+        df_filled[f"Rolling_{sensor_num}"] = df_filled[f"{sensor_num}"].rolling(window=10).mean()
 
-    plt.plot(df_filled["Timestamp"], df_filled[f"{sensor_num}"], label=f"Sensor {sensor_num} (Raw)")
-    plt.plot(df_filled["Timestamp"], df_filled[f"Rolling_{sensor_num}"], label=f"Sensor {sensor_num} (Rolling Avg)")
+        # Creates a blank canvas of size 10 inches wide x 5 inches tall
+        plt.figure(figsize=(10,5))
 
-    plt.xlabel("Time")
-    plt.ylabel("Sensor Reading")
-    plt.title(f"Sensor {sensor_num} Readings Over Time")
-    plt.xticks(rotation=45)
-    plt.legend()
-    plt.tight_layout()
+        # Plots the raw sensor data and the standardized sensor data on a graph together
+        plt.plot(df_filled["Timestamp"], df_filled[f"{sensor_num}"], label=f"Sensor {sensor_num} (Raw)")
+        plt.plot(df_filled["Timestamp"], df_filled[f"Rolling_{sensor_num}"], label=f"Sensor {sensor_num} (Rolling Avg)")
 
-    # Save the figure to file
-    plt.savefig(os.path.join(output_folder, f"sensor_{sensor_num}.png"))
+        # Organizes the graphs
+        plt.xlabel("Time")
+        plt.ylabel("Sensor Reading")
+        plt.title(f"Sensor {sensor_num} Readings Over Time")
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.tight_layout()
 
-    # Close the plot (important to prevent memory issues)
-    plt.close()
+        # Save the graph as a PNG to file
+        plt.savefig(filepath)
+
+        # Close the plot (important to prevent memory issues)
+        plt.close()
+    else:
+        print(f"Sensor {sensor_num} already has a saved plot. Skipping.")
 
