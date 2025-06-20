@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+import os
 
 # Turns the CSV file into a readable dataframe
 df = pd.read_csv("secom.csv")
@@ -21,22 +22,30 @@ timestamps = pd.date_range(start=start_time, periods=len(df_filled), freq="10s")
 # Add timestamps as new column
 df_filled["Timestamp"] = timestamps
 
-# Creates a blank canvas that is 10 inches wide x 5 inches tall
-plt.figure(figsize=(10,5))
+output_folder = "sensor_plots"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 
-# Plots a a line plot(x-axis: Time Values, y-axis: Sensor Readings, name of line for legend)
-plt.plot(df_filled["Timestamp"], df_filled["0"], label="Sensor 0")
-plt.plot(df_filled["Timestamp"], df_filled["1"], label="Sensor 1")
-plt.plot(df_filled["Timestamp"], df_filled["2"], label="Sensor 2")
-plt.plot(df_filled["Timestamp"], df_filled["3"], label="Sensor 3")
-plt.plot(df_filled["Timestamp"], df_filled["4"], label="Sensor 4")
-# Clumping plots commands together puts them on the same graph so that you can compare them
+# This whole entire loops goes through all 590 sensors (columns), plots the data and the rolling average of the data on a graph, and saves the graphs as PNG files into a folder
+for sensor_num in range(590):
+    print(f"Processing sensor {sensor_num} / 589...")
+    df_filled[f"Rolling_{sensor_num}"] = df_filled[f"{sensor_num}"].rolling(window=10).mean()
 
-plt.xlabel("Time")
-plt.ylabel("Sensor Reading")
-plt.title("Sensor 0 Readings Over Time")
-# Rotates the labels on the x-axis
-plt.xticks(rotation=45)
-plt.legend()
-plt.tight_layout()
-plt.show()
+    plt.figure(figsize=(10,5))
+
+    plt.plot(df_filled["Timestamp"], df_filled[f"{sensor_num}"], label=f"Sensor {sensor_num} (Raw)")
+    plt.plot(df_filled["Timestamp"], df_filled[f"Rolling_{sensor_num}"], label=f"Sensor {sensor_num} (Rolling Avg)")
+
+    plt.xlabel("Time")
+    plt.ylabel("Sensor Reading")
+    plt.title(f"Sensor {sensor_num} Readings Over Time")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.tight_layout()
+
+    # Save the figure to file
+    plt.savefig(os.path.join(output_folder, f"sensor_{sensor_num}.png"))
+
+    # Close the plot (important to prevent memory issues)
+    plt.close()
+
