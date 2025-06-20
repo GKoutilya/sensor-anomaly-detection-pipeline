@@ -28,7 +28,7 @@ if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
 # This whole entire loops goes through all 590 sensors (columns), plots the data and the rolling average of the data on a graph, and saves the graphs as PNG files into a folder
-#for sensor_num in range(590):
+for sensor_num in range(590):
     print(f"Processing sensor {sensor_num} / 589...")
 
     filepath = os.path.join(output_folder, f"sensor_{sensor_num}.png")
@@ -82,3 +82,47 @@ print(weird_max)
 weird_min = summary_stats.loc["min"][summary_stats.loc["min"] < -10000]
 print("Sensors with extremely low min values:")
 print(weird_min)
+
+# Combine all interesting sensors into one set to avoid duplicates
+interesting_sensors = set(low_std_sensors.index) | set(high_std_sensors.index) | set(weird_max.index) | set(weird_min.index)
+
+# Creates a new folder for all of these interesting sensors, if one isn't already created
+interesting_folder = "interesting_sensor_plots"
+if not os.path.exists(interesting_folder):
+    os.makedirs(interesting_folder)
+
+# Make sure rolling averages exist for all sensors
+for sensor_num in range(590):
+    col_name = f"Rolling_{sensor_num}"
+    if col_name not in df_filled.columns:
+        df_filled[col_name] = df_filled[f"{sensor_num}"].rolling(window=10).mean()
+
+# The loop goes through all of the interesting sensors and graphs the raw data and the standardized data on the same graph and saves a PNG file of the graph to a specific folder
+for sensor_num in interesting_sensors:
+    print(f"Plotting interesting sensor {sensor_num}")
+
+    # This creates a path between what should be saved (the PNG files) and where it should be saved (the folder called intersting_folder)
+    filepath = os.path.join(interesting_folder, f"sensor_{sensor_num}.png")
+
+    # The if-statement checks to make sure that the PNG files aren't already saved prior
+    if not os.path.exists(filepath):
+        # This creates the graph
+        plt.figure(figsize=(10,5))
+
+        # These two lines plots the raw data and the standardized data on the graph
+        plt.plot(df_filled["Timestamp"], df_filled[sensor_num], label=f"Sensor {sensor_num} (Raw)")
+        plt.plot(df_filled["Timestamp"], df_filled[f"Rolling_{sensor_num}"], label=f"Sensor {sensor_num} (Rolling Avg)")
+
+        # These lines organizes the graph
+        plt.xlabel("Time")
+        plt.ylabel("Sensor Reading")
+        plt.title(f"Sensor {sensor_num} Readings Over Time")
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.tight_layout()
+
+        # The PNG files are saved and the graphs are closed
+        plt.savefig(filepath)
+        plt.close()
+    else:
+        print(f"Sensor {sensor_num} already plotted. Skipping.")
