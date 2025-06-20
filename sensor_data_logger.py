@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
+import numpy as np
+from sklearn.preprocessing import StandardScaler # Scikit-learn package - popular machine learning library
 import os
 
 # Turns the CSV file into a readable dataframe
@@ -8,9 +9,10 @@ df = pd.read_csv("secom.csv")
 # Fills the missing values with the average
 df_filled = df.fillna(df.mean())
 
+# Learns the mean and standard deviation of the input data
 scaler = StandardScaler()
 
-# Learns the means and standard deviations of the columns and standardizes all the numbers with that info
+# Learns the mean and standard deviations of the columns and standardizes all the numbers with that info
 df_scaled = pd.DataFrame(scaler.fit_transform(df_filled), columns=df_filled.columns)
 
 # Assume data was collected every 10 second starting from 9:00 AM on June 20, 2025
@@ -126,3 +128,46 @@ for sensor_num in interesting_sensors:
         plt.close()
     else:
         print(f"Sensor {sensor_num} already plotted. Skipping.")
+
+# Flat sensor data with low standard deviation is uninformative and should be removed, df_cleaned is the new dataset without flat/uninformative sensors
+uninformative_sensors = list(low_std_sensors.index)
+df_cleaned = df_filled.drop(columns=uninformative_sensors)
+
+# Drop all columns that start with "Rolling_"
+df_cleaned = df_filled.drop(columns=[col for col in df_filled.columns if col.startswith("Rolling_")])
+
+
+# The Timestamp column that we added gets in the way so we need to remove it to have only sensor data
+sensor_data_cleaned = df_cleaned.drop(columns=["Timestamp"])
+
+
+# A Correlation Matrix is a table/matrix that correlates every variable in a dateset (in this case sensors) to the others
+# Correlation occurs on a scale from -1 to 1
+# +1 means there is a perfect positive correlation between to variables: when ones goes up, the other goes up the exact same way
+# -1 means there is a perfect negative correlation between to variables: when ones goes up, the other goes down the exact same way
+# 0 means there is no linear relationship between the variables
+
+# This gives us the correlation matrix of the cleaned up sensor data.
+# abs() finds the absolute value of the correlation matrix, we don't care if the correlation is positive or negative, as long as there is one
+corr_matrix = sensor_data_cleaned.corr().abs()
+
+# We don't want any duplicate values so we retrieve only half of the correlation matrix and discard the rest of the repeated values
+upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+
+# This creates a list of variables (sensors) that have a very high correlation between them that we can observe
+# We create this list to drop because sensors that are that highly correlated might measure the same thing so they are redundant to keep
+to_drop = [column for column in upper.columns if any(upper[column] > 0.95)]
+
+# This drops the redundant list from the already "cleaned" dataset to give use our final dataset that we can use and study
+df_final = df_cleaned.drop(columns=to_drop)
+
+
+# This saves our final, cleaned dataset to a CSV file that we can look at
+if not os.path.exists("secom_cleaned.csv"):
+    df_final.to_csv("secom_cleaned.csv", index=False)
+    print("Cleaned dataset saved as 'secom_cleaned.csv'")
+else:
+    print("File 'secom_cleaned.csv' already exists. Skipping save.")
+
+print("Original shape:", df.shape)
+print("After cleaning:", df_final.shape)
