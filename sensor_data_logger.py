@@ -1,22 +1,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 
+#Turns the CSV file into a readable dataframe
 df = pd.read_csv("secom.csv")
-
-'''print(df.head())
-print(df.columns)
-print(df.info())
-print(df.describe())
-print(df.isna().sum())
-print(df.dtypes)
-print(df['0'].head(10))
-print(df['0'].tail(10))'''
-
+#Fills the missing values with the average
 df_filled = df.fillna(df.mean())
 
+scaler = StandardScaler()
 
-print(df_filled.head())
-print(df_filled.info())
-print(df_filled.describe())
-
-print("Hello World")
+#Learns the means and standard deviations of the columns and standardizes all the numbers with that info
+df_scaled = pd.DataFrame(scaler.fit_transform(df_filled), columns=df_filled.columns)
