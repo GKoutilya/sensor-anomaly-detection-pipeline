@@ -2,8 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler # Scikit-learn package - popular machine learning library
 from sklearn.ensemble import IsolationForest
+from fpdf import FPDF
 
 #################### PHASE 1 ########################
 
