@@ -2,59 +2,94 @@
 
 ## Overview
 
-This project focuses on **detecting anomalies** in sensor data collected from a semiconductor manufacturing process. The goal is to build a robust pipeline that cleans, visualizes, and analyzes high-dimensional sensor data using machine learning — specifically the **Isolation Forest algorithm** — and generates a polished PDF report of key findings.
+This project focuses on **detecting anomalies** in high-dimensional sensor data from a semiconductor manufacturing process (SECOM dataset). It builds a complete data pipeline that performs preprocessing, exploratory visualization, statistical filtering, machine learning–based anomaly detection, and generates a PDF report of key insights.
 
 ---
 
-## What This Project Does
+## Key Functionality
 
-- Reads and cleans raw sensor data (`secom.csv`)
-- Fills in missing values and standardizes features
-- Adds timestamps and computes rolling averages
+- Loads and cleans raw data from `secom.csv`
+- Handles missing values and standardizes sensor readings
+- Adds synthetic timestamps and computes rolling averages
 - Visualizes trends for **all 590 sensors**
-- Identifies **interesting sensors** based on:
-  - Extreme values
+- Identifies **noteworthy sensors** based on:
+  - Extremely high/low values
   - Low or high standard deviation
-- Cleans and deduplicates sensor data using correlation analysis
-- Applies **Isolation Forest** to detect anomalies
-- Visualizes anomalies with **Seaborn**
-- Automatically generates a PDF anomaly report with key plots and metrics
+- Reduces redundancy using correlation-based filtering
+- Applies **Isolation Forest** to detect anomalous patterns
+- Creates visualizations of anomalies using **Seaborn**
+- Automatically generates a PDF anomaly report with visuals and metrics
 
 ---
 
-## Visual Output
+## Output Example
 
-Plots of raw + smoothed sensor data, highlighting sensors with unusual behavior. Sample below:
+Line plots showing raw vs. smoothed sensor values, with anomalies highlighted.  
+Sample preview:
 
 ![sample](sensor_plots/sample_sensor.png)
 
 ---
 
-## Features Added
+## Features
 
 | Feature                | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
-| Feature Engineering    | Rolling averages, outlier filtering, redundancy removal                     |
-| Visualizations         | Matplotlib + Seaborn plots for trend and anomaly detection                  |
-| Model                  | Isolation Forest (scikit-learn) for unsupervised anomaly detection          |
-| Report Generation      | Auto-created PDF summarizing anomaly scores and flagged data points         |
-| Organization           | Modular phase-based pipeline: ingestion → visualization → detection → export|
+| **Feature Engineering**| Adds rolling averages, filters flat/noisy signals, removes redundancy       |
+| **Visualization**      | Time-series plots, correlation heatmaps, anomaly score distributions        |
+| **Modeling**           | Uses Isolation Forest (unsupervised) to identify anomalous data points      |
+| **Reporting**          | Automatically creates a PDF summarizing findings with embedded plots        |
+| **Modular Design**     | Structured in 4 clearly separated phases for scalability and readability     |
 
 ---
 
-## Tech Stack
+## 🛠 Tech Stack
 
-- Python 3.13.3
-- Pandas, NumPy  
-- Matplotlib, Seaborn  
-- scikit-learn  
-- fpdf2 (for PDF reports)
+- **Python** 3.13.3  
+- **Pandas**, **NumPy** – Data handling  
+- **Matplotlib**, **Seaborn** – Visualizations  
+- **scikit-learn** – Machine learning (Isolation Forest)  
+- **fpdf2** – PDF report generation
 
 ---
 
 ## Getting Started
 
-1. Place `secom.csv` in the root directory.
-2. Install dependencies:
+1. Clone the repository and place `secom.csv` in the root directory.
+2. Install the required packages:
    ```bash
    pip install -r requirements.txt
+4. Run the main script:
+    python sensor_data_logger.py
+
+---
+
+## Project Structure
+
+├── sensor_plots/                # Time-series plots for all sensors
+├── interesting_sensor_plots/    # Plots of extreme/flat/noisy sensors
+├── anomaly_visuals/             # Visuals of most/least anomalous sensors
+├── anomalies_detected.csv       # CSV of flagged anomalous rows
+├── secom_cleaned.csv            # Cleaned and deduplicated dataset
+├── anomaly_report.pdf           # Auto-generated PDF report
+├── sensor_data_logger.py        # Main Python script
+├── requirements.txt             # Python dependencies
+└── README.md
+
+---
+
+## Notes
+
+The SECOM dataset has many missing values and correlated features; preprocessing is critical.
+
+Isolation Forest is particularly suited to high-dimensional, unlabeled data like this.
+
+Run time may vary depending on system performance due to the number of plots.
+
+---
+
+## Author
+
+Koutilya Ganapathiraju
+Texas A&M University - College Station
+Manufacturing & Mechanical Engineering
