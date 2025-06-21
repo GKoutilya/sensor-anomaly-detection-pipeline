@@ -8,13 +8,7 @@ from sklearn.ensemble import IsolationForest
 from datetime import datetime
 from fpdf import FPDF
 
-pdf = FPDF()
-pdf.add_page()
-pdf.set_font("Arial", size=12)
-pdf.cell(0, 10, "Hello, world!")
-
-#################### PHASE 1 ########################
-
+# Loads and standardizes the raw sensor data, filling in missing values and adding timestamps.
 def phase1():
     # Turns the CSV file into a readable dataframe
     df = pd.read_csv("secom.csv")
@@ -38,8 +32,7 @@ def phase1():
 
     return df_filled
 
-#################### PHASE 2 #########################
-
+# Generates and saves time-series plots (raw and rolling average) for all sensor readings.
 def phase2(df_filled):
     # Checks to see if the folder already exists
     output_folder = "sensor_plots"
@@ -78,8 +71,7 @@ def phase2(df_filled):
         else:
             print(f"Sensor {sensor_num} already has a saved plot. Skipping.")
 
-#################### PHASE 3 ##########################
-
+# Indentifies and removes uninformative or redundant sensors based on statistics and correlation, saving a cleaned dataset.
 def phase3(df_filled):
     # Drops Timestamp when looking at the statistics and describes the sensor statistics
     sensor_data_only = df_filled.drop(columns=["Timestamp"])
@@ -193,8 +185,7 @@ def phase3(df_filled):
 
     return df_final
 
-#################### PHASE 4 ##########################
-
+# Detects anomalies using Isolation Forest, visualizes key results, and generates a summmary PDF report.
 def phase4(df_final):
     # Copy cleaned dataset
     df = df_final.copy()
@@ -243,74 +234,100 @@ def phase4(df_final):
     return df
 
 def visualize_anomalies(df):
+    # Checks to see if a folder called "anomaly_visuals" exists and creates it if it doesn't exist
     output_folder = "anomaly_visuals"
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # Count anomalies per sensor
+    # Selects all numeric columns that represent actual sensor data and not the columns that were added during anomaly detection: "Anomaly" and "Anomaly_Score"
     numeric_columns = df.select_dtypes(include=[np.number]).columns.drop(["Anomaly", "Anomaly_Score"], errors='ignore')
+
+    # Counts how many rows are labeled as anomalies for each sensor and stores them in a dictionary
     anomaly_counts = {
-        col: df[df["Anomaly"] == -1][col].count()
-        for col in numeric_columns
-        if df[col].std() > 0.01
+    col: df[(df["Anomaly"] == -1) & (df[col].notnull())].shape[0]
+    for col in numeric_columns
     }
 
-    # Top 5 most and least anomalous sensors
+    # Adds the top 5 most and least anomalous sensors to a list
     most_anomalous = sorted(anomaly_counts, key=anomaly_counts.get, reverse=True)[:5]
-    least_anomalous = sorted(anomaly_counts, key=anomaly_counts.get)[:5]
+    least_anomalous = sorted(
+        [k for k, v in anomaly_counts.items() if v > 0],
+        key=anomaly_counts.get
+    )[:5]
+
     selected_sensors = most_anomalous + least_anomalous
     print("Most anomalous sensors: ", most_anomalous)
     print("Least anomalous sensors: ", least_anomalous)
-
+ 
+    # For each sensor in the combined list:
     for sensor in selected_sensors:
         filepath = os.path.join(output_folder, f"anomaly_plot_{sensor}.png")
         if not os.path.exists(filepath):
             plt.figure(figsize=(10,5))
+            # Creates a line plot of the sensor readings over all samples
             sns.lineplot(x=range(len(df)), y=df[sensor], label="Sensor Reading")
+            # Overlays red scatter points where anomalies are detected
             sns.scatterplot(x=df[df["Anomaly"] == -1].index, y=df[df["Anomaly"] == -1][sensor], color='red', label='Anomaly', s=50)
+            # Titles the plot
             plt.title(f"{'Most' if sensor in most_anomalous else 'Least'} Anomalous Sensor: {sensor}")
             plt.xlabel("Sample Index")
             plt.ylabel("Sensor Value")
             plt.legend()
             plt.tight_layout()
+            # Saves a PNG file under the "anomaly_visuals" folder (only if the plot doesn't already exist)
             plt.savefig(filepath)
             plt.close()
 
-    # Correlation heatmap
+    # If the file doesn't already exist:
     corr_path = os.path.join(output_folder, "correlation_heatmap.png")
     if not os.path.exists(corr_path):
+        # Creates a correlation matrix between all numeric sensor columns
         corr = df[numeric_columns].corr()
         plt.figure(figsize=(12,10))
+        # Plots the correlation matrix as a heatmap
         sns.heatmap(corr, cmap='coolwarm', center=0)
         plt.title("Sensor Correlation Heatmap")
         plt.tight_layout()
+        # Saves the heatmap as a PNG file
         plt.savefig(corr_path)
         plt.close()
 
-    # Anomaly score distribution
+    # If the file doesn't already exist
     score_path = os.path.join(output_folder, "anomaly_score_distribution.png")
     if not os.path.exists(score_path):
         plt.figure(figsize=(8, 5))
+        # Plots a histogram of the anomaly scores - continuous values that indicate the degree of anomaly
+        # Also includes a KDE curve (a smoothed estimate) for distribution shape
         sns.histplot(df["Anomaly_Score"], bins=50, kde=True)
         plt.title("Anomaly Score Distribution")
         plt.xlabel("Score")
         plt.tight_layout()
+        # Saves the histogram as a PNG file
         plt.savefig(score_path)
         plt.close()
 
-    # Bar plot: Sensor-wise anomaly counts
+    # If the file doesn't already exist
     bar_path = os.path.join(output_folder, "sensor_anomaly_counts.png")
     if not os.path.exists(bar_path):
         anomaly_series = pd.Series(anomaly_counts).sort_values(ascending=False)
         plt.figure(figsize=(12,6))
+        # Creates a bar plot showing the number of anomalies for every sensor
+        # Sensors are sorted descending by anomaly count
         sns.barplot(x=anomaly_series.index, y=anomaly_series.values)
+        # Sensor names on the x-axis are rotated for readability
         plt.xticks(rotation=90)
         plt.title("Number of Anomalies per Sensor")
         plt.xlabel("Sensor")
         plt.ylabel("Anomaly Count")
         plt.tight_layout()
+        # Saves the bar plot as a PNG file
         plt.savefig(bar_path)
         plt.close()
+
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font("Arial", size=12)
+pdf.cell(0, 10, "Hello, world!")
 
 class PDFWithPageNumbers(FPDF):
     def footer(self):
@@ -320,40 +337,51 @@ class PDFWithPageNumbers(FPDF):
         self.cell(0, 10, page_number, 0, 0, "C")
 
 def generate_pdf(df):
+    # Checks to see whether the PDF already exists or not, skips the whole process if it does
     pdf_path = "anomaly_report.pdf"
     if os.path.exists(pdf_path):
         print("PDF report already exists. Skipping generation.")
         return
     
+    # Creates a new PDF object from a subclass that adds page numbers in the footer
     pdf = PDFWithPageNumbers()
+    # Enables automatic page breaks with a 15mm margin
     pdf.set_auto_page_break(auto=True, margin=15)
+    # Adds the first page and sets the default font and size
     pdf.add_page()
     pdf.set_font("Arial", size=12)
 
     pdf.set_font("Arial", 'B', 16)
+    # Adds a centered bold title
     pdf.cell(200,10,txt="Anomaly Detection Report", ln=True, align='C')
+    # Prints a timestamp in italics showing the time the report was generated
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     pdf.set_font("Arial", "I", 10)
     pdf.cell(0, 10, f"Generated on: {timestamp}", ln=True)
     pdf.set_font("Arial", size=12)
+    # Adds vertical spacing?
     pdf.ln(10)
 
+    # Shows key statistics such as total number of samples and how many anomalies were detected
     total_rows = len(df)
     total_anomalies = (df["Anomaly"] == -1).sum()
     pdf.cell(0,10, f"Total data points: {total_rows}", ln=True)
     pdf.cell(0,10, f"Anomalies detected: {total_anomalies}", ln=True)
+    # Adds a short description about what's to follow in the report
     pdf.cell(0,10, "The next pages show comparisons between the most and least anomalous sensors.", ln=True)
 
+    # This whole chunk of code iterates over all the PNG files in the anomaly_visuals folder and adds each image to its own page and scales the width to 180mm
     image_folder = "anomaly_visuals"
     for img_file in sorted(os.listdir(image_folder)):
         if img_file.endswith(".png"):
             pdf.add_page()
             pdf.image(os.path.join(image_folder, img_file), w=180)
-
+    
+    # This saves the PDF file to a disk and prints and output message to the console
     pdf.output(pdf_path)
     print("PDF report saved as 'anomaly_report.pdf'")
 
-##################### MAIN ############################
+##################### MAIN ########################
 
 if __name__ == "__main__":
     df_filled = phase1()
