@@ -5,7 +5,13 @@ import os
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler # Scikit-learn package - popular machine learning library
 from sklearn.ensemble import IsolationForest
+from datetime import datetime
 from fpdf import FPDF
+
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font("Arial", size=12)
+pdf.cell(0, 10, "Hello, world!")
 
 #################### PHASE 1 ########################
 
@@ -199,6 +205,8 @@ def phase4(df_final):
     # Check no missing values
     assert not df_numeric.isnull().values.any(), "Data contains missing values."
 
+    # Isolation Forest is ideal for high-dimensional data like sensors, chose it because it performs well for unsupervised anomaly detection, is efficient, and doesn't require labeled data.
+
     # Create an Isolation Forest model, more trees = better but slower
     # Isolation Forests find anomalies by recursively partitioning data into random subsets (trees).
     # Data points that are isolated quickly (with fewer splits, i.e., shorter paths) are considered anomalies because they differ significantly from the majority of the data.
@@ -211,11 +219,8 @@ def phase4(df_final):
     # Trains the model on the data
     model.fit(df_numeric)
 
-    # Predict anomalies (-1 = anomaly, 1 = normal)
-    predictions = model.predict(df_numeric)
-
-    # Add predictions as a new column
-    df["Anomaly"] = predictions
+    # Predict anomalies (-1 = anomaly, 1 = normal) and add as new column
+    df["Anomaly"] = model.predict(df_numeric)
 
     # .decision_function(x) -  gives a score, lower score means more anomalous
     # Add anomaly scores
@@ -225,12 +230,128 @@ def phase4(df_final):
     num_anomalies = (df["Anomaly"] == -1).sum()
     print(f"Number of anomalies detected: {num_anomalies} out of {len(df)} rows")
 
-    # Save anomalies for later review
-    anomalies_only = df[df["Anomaly"] == -1]
-    anomalies_only.to_csv("anomalies_detected.csv", index=False)
-    print("Anomalies saved to 'anomalies_detected.csv'")
+    # Save anomalies for later review after checking to see if it already exists
+    if not os.path.exists("anomalies_detected.csv"):
+        df[df["Anomaly"] == -1].to_csv("anomalies_detected.csv", index=False)
+        print("Anomalies saved to 'anomalies_detected.csv'")
+    else:
+        print("'anomalies_detected.csv' already exists. Skipping save.")
+
+    visualize_anomalies(df)
+    generate_pdf(df)
 
     return df
+
+def visualize_anomalies(df):
+    output_folder = "anomaly_visuals"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Count anomalies per sensor
+    numeric_columns = df.select_dtypes(include=[np.number]).columns.drop(["Anomaly", "Anomaly_Score"], errors='ignore')
+    anomaly_counts = {
+        col: df[df["Anomaly"] == -1][col].count()
+        for col in numeric_columns
+        if df[col].std() > 0.01
+    }
+
+    # Top 5 most and least anomalous sensors
+    most_anomalous = sorted(anomaly_counts, key=anomaly_counts.get, reverse=True)[:5]
+    least_anomalous = sorted(anomaly_counts, key=anomaly_counts.get)[:5]
+    selected_sensors = most_anomalous + least_anomalous
+    print("Most anomalous sensors: ", most_anomalous)
+    print("Least anomalous sensors: ", least_anomalous)
+
+    for sensor in selected_sensors:
+        filepath = os.path.join(output_folder, f"anomaly_plot_{sensor}.png")
+        if not os.path.exists(filepath):
+            plt.figure(figsize=(10,5))
+            sns.lineplot(x=range(len(df)), y=df[sensor], label="Sensor Reading")
+            sns.scatterplot(x=df[df["Anomaly"] == -1].index, y=df[df["Anomaly"] == -1][sensor], color='red', label='Anomaly', s=50)
+            plt.title(f"{'Most' if sensor in most_anomalous else 'Least'} Anomalous Sensor: {sensor}")
+            plt.xlabel("Sample Index")
+            plt.ylabel("Sensor Value")
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(filepath)
+            plt.close()
+
+    # Correlation heatmap
+    corr_path = os.path.join(output_folder, "correlation_heatmap.png")
+    if not os.path.exists(corr_path):
+        corr = df[numeric_columns].corr()
+        plt.figure(figsize=(12,10))
+        sns.heatmap(corr, cmap='coolwarm', center=0)
+        plt.title("Sensor Correlation Heatmap")
+        plt.tight_layout()
+        plt.savefig(corr_path)
+        plt.close()
+
+    # Anomaly score distribution
+    score_path = os.path.join(output_folder, "anomaly_score_distribution.png")
+    if not os.path.exists(score_path):
+        plt.figure(figsize=(8, 5))
+        sns.histplot(df["Anomaly_Score"], bins=50, kde=True)
+        plt.title("Anomaly Score Distribution")
+        plt.xlabel("Score")
+        plt.tight_layout()
+        plt.savefig(score_path)
+        plt.close()
+
+    # Bar plot: Sensor-wise anomaly counts
+    bar_path = os.path.join(output_folder, "sensor_anomaly_counts.png")
+    if not os.path.exists(bar_path):
+        anomaly_series = pd.Series(anomaly_counts).sort_values(ascending=False)
+        plt.figure(figsize=(12,6))
+        sns.barplot(x=anomaly_series.index, y=anomaly_series.values)
+        plt.xticks(rotation=90)
+        plt.title("Number of Anomalies per Sensor")
+        plt.xlabel("Sensor")
+        plt.ylabel("Anomaly Count")
+        plt.tight_layout()
+        plt.savefig(bar_path)
+        plt.close()
+
+class PDFWithPageNumbers(FPDF):
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("Arial", "I", 8)
+        page_number = f"Page {self.page_no()}"
+        self.cell(0, 10, page_number, 0, 0, "C")
+
+def generate_pdf(df):
+    pdf_path = "anomaly_report.pdf"
+    if os.path.exists(pdf_path):
+        print("PDF report already exists. Skipping generation.")
+        return
+    
+    pdf = PDFWithPageNumbers()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200,10,txt="Anomaly Detection Report", ln=True, align='C')
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(0, 10, f"Generated on: {timestamp}", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.ln(10)
+
+    total_rows = len(df)
+    total_anomalies = (df["Anomaly"] == -1).sum()
+    pdf.cell(0,10, f"Total data points: {total_rows}", ln=True)
+    pdf.cell(0,10, f"Anomalies detected: {total_anomalies}", ln=True)
+    pdf.cell(0,10, "The next pages show comparisons between the most and least anomalous sensors.", ln=True)
+
+    image_folder = "anomaly_visuals"
+    for img_file in sorted(os.listdir(image_folder)):
+        if img_file.endswith(".png"):
+            pdf.add_page()
+            pdf.image(os.path.join(image_folder, img_file), w=180)
+
+    pdf.output(pdf_path)
+    print("PDF report saved as 'anomaly_report.pdf'")
 
 ##################### MAIN ############################
 
@@ -238,4 +359,4 @@ if __name__ == "__main__":
     df_filled = phase1()
     phase2(df_filled)
     df_final = phase3(df_filled)
-    phase4(df_final)
+    df = phase4(df_final)
