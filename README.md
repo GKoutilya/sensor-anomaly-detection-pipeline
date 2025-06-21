@@ -64,20 +64,6 @@ Sample preview:
 
 ---
 
-## Project Structure
-
-├── sensor_plots/                # Time-series plots for all sensors
-├── interesting_sensor_plots/    # Plots of extreme/flat/noisy sensors
-├── anomaly_visuals/             # Visuals of most/least anomalous sensors
-├── anomalies_detected.csv       # CSV of flagged anomalous rows
-├── secom_cleaned.csv            # Cleaned and deduplicated dataset
-├── anomaly_report.pdf           # Auto-generated PDF report
-├── sensor_data_logger.py        # Main Python script
-├── requirements.txt             # Python dependencies
-└── README.md
-
----
-
 ## Notes
 
 The SECOM dataset has many missing values and correlated features; preprocessing is critical.
@@ -90,6 +76,6 @@ Run time may vary depending on system performance due to the number of plots.
 
 ## Author
 
-Koutilya Ganapathiraju
-Texas A&M University - College Station
-Manufacturing & Mechanical Engineering
+- Koutilya Ganapathiraju
+- Texas A&M University - College Station
+- Manufacturing & Mechanical Engineering
