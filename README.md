@@ -66,11 +66,9 @@ Sample preview:
 
 ## Notes
 
-The SECOM dataset has many missing values and correlated features; preprocessing is critical.
-
-Isolation Forest is particularly suited to high-dimensional, unlabeled data like this.
-
-Run time may vary depending on system performance due to the number of plots.
+- The SECOM dataset has many missing values and correlated features; preprocessing is critical.
+- Isolation Forest is particularly suited to high-dimensional, unlabeled data like this.
+- Run time may vary depending on system performance due to the number of plots.
 
 ---
 
